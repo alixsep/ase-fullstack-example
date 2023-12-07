@@ -1,0 +1,28 @@
+.step {
+  // .question {
+  // font-weight: bold;
+  // }
+}
+.buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 8px;
+  .button {
+    width: 36px;
+    color: #fff;
+    background-color: rgb(40, 141, 236);
+    border-radius: 4px;
+    cursor: pointer;
+    &:hover {
+      background-color: rgb(88, 173, 253);
+    }
+    &.disabled {
+      background-color: #e0e0e0;
+    }
+  }
+}
+.error-text {
+  font-size: 16px;
+  color: rgb(255, 0, 85);
+}

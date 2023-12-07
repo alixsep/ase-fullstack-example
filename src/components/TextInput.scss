@@ -1,0 +1,14 @@
+.text-input {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: #e0e0e0;
+  border-bottom: 2px solid rgb(40, 141, 236);
+  &.error {
+    border-bottom: 2px solid rgb(255, 0, 85);
+    background-color: rgb(255, 213, 228);
+    // &::placeholder {
+    //   color: #fff;
+    // }
+  }
+}
