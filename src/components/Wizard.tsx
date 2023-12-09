@@ -92,7 +92,7 @@ const stepsValidators = [
   (i: string) => {
     if (i == '') return { is: true, text: 'Field can not be empty.' };
     else {
-      fetch('127.0.0.1:3000/' + i)
+      fetch('http://127.0.0.1:3000/' + i)
         .then((res) => {
           return res.json();
         })
