@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
+import { useMemo, useState } from 'react';
 
 import TextInput from './TextInput';
 import './Wizard.scss';
@@ -14,100 +13,9 @@ type dataType = {
   id: string;
   verified: boolean;
 };
-type stepType = {
-  data: dataType;
-  setData: Dispatch<SetStateAction<dataType>>;
-  error: boolean;
-};
 type errorType = {
   is: boolean;
   text: string;
-};
-
-const STEP_COUNTS = 3 as const;
-
-///////////////// Step 0
-const Step0 = ({ data, setData, error }: stepType) => {
-  return (
-    <div className='step step0'>
-      <div className='question'>Enter your full name:</div>
-      <TextInput
-        error={error}
-        value={data.name}
-        setValue={(newValue: string) =>
-          setData((prev) => ({ ...prev, name: newValue }))
-        }
-      />
-    </div>
-  );
-};
-
-///////////////// Step 1
-const Step1 = ({ data, setData, error }: stepType) => {
-  return (
-    <div className='step step1'>
-      <div className='question'>Enter your ID:</div>
-      <TextInput
-        error={error}
-        value={data.id}
-        setValue={(newValue: string) =>
-          setData((prev) => ({ ...prev, id: newValue }))
-        }
-      />
-    </div>
-  );
-};
-
-///////////////// Step 2
-const Step2 = ({ data, setData, error }: stepType) => {
-  return <div className='show-results'>{data.verified}</div>;
-};
-
-const steps = (
-  step: number,
-  data: dataType,
-  setData: stepType['setData'],
-  error: boolean
-) => {
-  switch (step) {
-    case 0:
-      return <Step0 data={data} setData={setData} error={error} />;
-
-    case 1:
-      return <Step1 data={data} setData={setData} error={error} />;
-
-    case 2:
-      return <Step2 data={data} setData={setData} error={error} />;
-
-    default:
-      break;
-  }
-};
-
-const stepsValidators = [
-  (i: string) => {
-    if (i == '') return { is: true, text: 'Field can not be empty.' };
-    return { is: false, text: '' };
-  },
-  (i: string) => {
-    if (i == '') return { is: true, text: 'Field can not be empty.' };
-    else {
-      fetch('http://127.0.0.1:3000/' + i)
-        .then((res) => {
-          return res.json();
-        })
-        .then((res) => {
-          console.log(res);
-        });
-    }
-  },
-  (i: string) => {
-    return { is: false, text: '' };
-  },
-];
-
-const checkValidation = (step: number, i: string) => {
-  return stepsValidators[step](i);
 };
 
 const Wizard = ({
@@ -125,9 +33,93 @@ const Wizard = ({
     text: '',
   });
 
+  /////////////////////////// STEP 0
+  const Step0 = useMemo(() => {
+    return (
+      <div className='step step0'>
+        <div className='question'>Enter your full name:</div>
+        <TextInput
+          error={errorData.is}
+          value={data.name}
+          setValue={(newValue: string) =>
+            setData((prev) => ({ ...prev, name: newValue }))
+          }
+        />
+      </div>
+    );
+  }, [errorData, data.name]);
+  const step0validator = async (): Promise<errorType> => {
+    let v: errorType;
+
+    if (data.name == '') v = { is: true, text: 'Field can not be empty.' };
+    else v = { is: false, text: '' };
+
+    return v;
+  };
+
+  /////////////////////////// STEP 1
+  const Step1 = useMemo(() => {
+    return (
+      <div className='step step1'>
+        <div className='question'>Enter your ID:</div>
+        <TextInput
+          error={errorData.is}
+          value={data.id}
+          setValue={(newValue: string) =>
+            setData((prev) => ({ ...prev, id: newValue }))
+          }
+        />
+      </div>
+    );
+  }, [errorData, data.id]);
+  const step1validator = async (): Promise<errorType> => {
+    let v: errorType;
+
+    if (data.id == '') {
+      v = { is: true, text: 'Field cannot be empty.' };
+    } else {
+      try {
+        const res = await fetch('http://127.0.0.1:3000/' + data.id);
+        const jsonData = await res.json();
+        const j = JSON.parse(jsonData);
+
+        if (j.res.length === 0) {
+          v = {
+            is: true,
+            text: `User with the ID ${data.id} doesn't exist.`,
+          };
+        } else {
+          setData((prev) => ({ ...prev, verified: j.res[0].isVerified }));
+
+          v = { is: false, text: '' };
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        v = { is: true, text: 'Error fetching data.' };
+      }
+    }
+
+    return v;
+  };
+
+  /////////////////////////// STEP 2
+  const Step2 = useMemo(() => {
+    return (
+      <div className='show-results'>
+        Dear {data.name} with the ID {data.id}, you are
+        {data.verified ? '' : ' not'} verified.
+      </div>
+    );
+  }, [data]);
+  const step2validator = async (): Promise<errorType> => ({ is: false, text: '' });
+
+  const steps = [Step0, Step1, Step2];
+  const validators = [step0validator, step1validator, step2validator];
+  const STEP_COUNTS = steps.length;
+
   return (
     <div className='step-wrapper'>
-      {steps(stepNumber, data, setData, errorData.is)}
+      {steps[stepNumber]}
       <div className='buttons'>
         <div
           className={`button${stepNumber == 0 ? ' disabled' : ''}`}
@@ -143,21 +135,17 @@ const Wizard = ({
           }`}
           onClick={() => {
             if (stepNumber != STEP_COUNTS - 1) {
-              let validationString = '';
-              if (stepNumber == 0) validationString = data.name;
-              if (stepNumber == 1) validationString = data.id;
-              const v = checkValidation(stepNumber, validationString);
-              console.log(v);
-
-              if (v.is) {
-                setErrorData(v);
-              } else {
-                setErrorData({
-                  is: false,
-                  text: '',
-                });
-                incrementNumber();
-              }
+              validators[stepNumber]().then((v) => {
+                if (v.is) {
+                  setErrorData(v);
+                } else {
+                  setErrorData({
+                    is: false,
+                    text: '',
+                  });
+                  incrementNumber();
+                }
+              });
             }
           }}
         >
